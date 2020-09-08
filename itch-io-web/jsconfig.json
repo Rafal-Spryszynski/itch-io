@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "checkJs": false
+    },
+    "include": [
+        "src/main/webapp/**/*",
+        "/home/heko/node_modules/phaser/types/*"
+    ],
+    "typeAcquisition": {
+        "include": [
+            "jquery",
+            "underscore"
+        ]
+    }
+}
