@@ -28,6 +28,16 @@ class GameScene extends Phaser.Scene {
     }
 
     create() {
+        this.graphics = this.add.graphics();
+        this.drawBoard();
+        this.drawCross();
+
+        $(window).resize(() => {
+            this.graphics.clear();
+            this.drawBoard();
+            this.drawCross();
+        });
+
         this.chip1 = this.add.sprite($(window).width() * .25, $(window).height() * .25, 'image/chips', 'chipBlue.png');
         this.chip2 = this.add.sprite($(window).width() * .50, $(window).height() * .25, 'image/chips', 'chipBlue.png');
         this.chip3 = this.add.sprite($(window).width() * .75, $(window).height() * .25, 'image/chips', 'chipBlue.png');
@@ -51,5 +61,28 @@ class GameScene extends Phaser.Scene {
         this.cardPlace1 = this.sound.add('cardPlace1');
         this.cardPlace2 = this.sound.add('cardPlace2');
         this.cardPlace1.play();
+    }
+
+    drawBoard() {
+        const oneThird = .33;
+        const twoThird = .66;
+
+        this.graphics.lineStyle($(window).width() * .025, 0x20abc7);
+
+        this.graphics.lineBetween($(window).width() * oneThird, 0, $(window).width() * oneThird, $(window).height());
+        this.graphics.lineBetween($(window).width() * twoThird, 0, $(window).width() * twoThird, $(window).height());
+
+        this.graphics.lineBetween(0, $(window).height() * oneThird, $(window).width(), $(window).height() * oneThird);
+        this.graphics.lineBetween(0, $(window).height() * twoThird, $(window).width(), $(window).height() * twoThird);
+    }
+
+    drawCross() {
+        const oneThird = .33;
+        const crossSize = .2;
+        const widthSide = $(window).width() * oneThird;
+        const heightSide = $(window).height() * oneThird;
+
+        this.graphics.lineBetween(widthSide * crossSize, heightSide * crossSize, widthSide - widthSide * crossSize, heightSide - heightSide * crossSize);
+        this.graphics.lineBetween(widthSide * crossSize, heightSide - heightSide * crossSize, widthSide - widthSide * crossSize, heightSide * crossSize);
     }
 }
