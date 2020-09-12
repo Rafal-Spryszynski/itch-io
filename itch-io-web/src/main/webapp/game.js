@@ -21,7 +21,6 @@ class GameScene extends Phaser.Scene {
         super(GameScene.name);
 
         this.oneThird = .33;
-        this.twoThird = .66;
     }
 
     preload() {
@@ -30,11 +29,17 @@ class GameScene extends Phaser.Scene {
     }
 
     create() {
+        this.placeCrossSound = this.sound.add('cardPlace1');
+        this.placeCircleSound = this.sound.add('cardPlace2');
+
         this.captureWindowSize();
 
         this.graphics = this.add.graphics();
         this.drawBoard();
         this.drawCross();
+        this.placeCrossSound.play();
+        this.drawCircle();
+        this.placeCircleSound.play();
 
         $(window).resize(() => {
             this.captureWindowSize();
@@ -42,22 +47,20 @@ class GameScene extends Phaser.Scene {
             this.graphics.clear();
             this.drawBoard();
             this.drawCross();
+            this.drawCircle();
         });
-
-        this.cardPlace1 = this.sound.add('cardPlace1');
-        this.cardPlace2 = this.sound.add('cardPlace2');
-        this.cardPlace1.play();
     }
 
     captureWindowSize() {
         this.windowWidth = $(window).width();
         this.windowHeight = $(window).height();
+        this.boardLineWidth = this.windowWidth * .025;
         this.fieldWidth = this.windowWidth * this.oneThird;
         this.fieldHeight = this.windowHeight * this.oneThird;
     }
 
     drawBoard() {
-        this.graphics.lineStyle(this.windowWidth * .025, 0xffffff);
+        this.graphics.lineStyle(this.boardLineWidth, 0xffffff);
 
         this.graphics.save();
         this.drawVerticalLine();
@@ -81,19 +84,40 @@ class GameScene extends Phaser.Scene {
     }
 
     drawCross() {
-        const crossSize = .2;
+        const crossSize = .7;
+        const crossLineLength = Math.min(this.fieldWidth, this.fieldHeight) / 2 * crossSize;
 
-        this.graphics.lineBetween(this.fieldWidth * crossSize, this.fieldHeight * crossSize, this.fieldWidth - this.fieldWidth * crossSize, this.fieldHeight - this.fieldHeight * crossSize);
-        this.graphics.lineBetween(this.fieldWidth * crossSize, this.fieldHeight - this.fieldHeight * crossSize, this.fieldWidth - this.fieldWidth * crossSize, this.fieldHeight * crossSize);
+        this.graphics.save();
+        this.graphics.translateCanvas(this.fieldWidth / 2, this.fieldHeight / 2);
+        this.graphics.rotateCanvas(Phaser.Math.DegToRad(45));
 
-        this.graphics.translateCanvas(this.fieldWidth, 0);
+        this.graphics.lineBetween(-crossLineLength, 0, crossLineLength, 0);
+        this.graphics.lineBetween(0, -crossLineLength, 0, crossLineLength);
+        
+        this.graphics.restore();
+    }
 
-        this.graphics.lineBetween(this.fieldWidth * crossSize, this.fieldHeight * crossSize, this.fieldWidth - this.fieldWidth * crossSize, this.fieldHeight - this.fieldHeight * crossSize);
-        this.graphics.lineBetween(this.fieldWidth * crossSize, this.fieldHeight - this.fieldHeight * crossSize, this.fieldWidth - this.fieldWidth * crossSize, this.fieldHeight * crossSize);
+    drawCircle() {
+        const circleSize = .3;
 
-        this.graphics.translateCanvas(this.fieldWidth, 0);
+        this.graphics.save();
+        this.graphics.translateCanvas(this.fieldWidth, this.fieldHeight);
 
-        this.graphics.lineBetween(this.fieldWidth * crossSize, this.fieldHeight * crossSize, this.fieldWidth - this.fieldWidth * crossSize, this.fieldHeight - this.fieldHeight * crossSize);
-        this.graphics.lineBetween(this.fieldWidth * crossSize, this.fieldHeight - this.fieldHeight * crossSize, this.fieldWidth - this.fieldWidth * crossSize, this.fieldHeight * crossSize);
+        const fieldDimension = Math.min(this.fieldWidth, this.fieldHeight);
+
+        this.graphics.beginPath();
+        this.graphics.arc(
+            this.fieldWidth / 2, 
+            this.fieldHeight / 2, 
+            fieldDimension * circleSize, 
+            Phaser.Math.DegToRad(0), 
+            Phaser.Math.DegToRad(360), 
+            false, 
+            .02
+        );
+        this.graphics.strokePath();
+        this.graphics.closePath();
+
+        this.graphics.restore();
     }
 }
