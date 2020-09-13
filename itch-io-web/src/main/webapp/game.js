@@ -22,6 +22,7 @@ class GameScene extends Phaser.Scene {
 
         this.oneThird = .33;
         this.primaryColor = 0xffffff;
+        this.isCrossNext = true;
     }
 
     preload() {
@@ -164,18 +165,22 @@ class GameScene extends Phaser.Scene {
         const field = new Phaser.Geom.Rectangle(x, y, this.fieldWidth, this.fieldHeight);
         fieldGraphics
             .setInteractive(field, Phaser.Geom.Rectangle.Contains)
-            .once(Phaser.Input.Events.POINTER_UP, () => this.drawCrossAtPosition(x, y));
+            .once(Phaser.Input.Events.POINTER_UP, () => this.drawSymbolAtPosition(x, y));
     }
 
     /**
      * @param {Number} x
      * @param {Number} y
      */
-    drawCrossAtPosition(x, y) {
+    drawSymbolAtPosition(x, y) {
         this.graphics.save();
         this.graphics.translateCanvas(x, y);
 
-        this.drawCross();
+        if (this.isCrossNext) {
+            this.drawCross();
+        } else {
+            this.drawCircle();
+        }
 
         this.graphics.restore();
     }
@@ -192,14 +197,12 @@ class GameScene extends Phaser.Scene {
         this.graphics.lineBetween(0, -crossLineLength, 0, crossLineLength);
         
         this.graphics.restore();
+
+        this.isCrossNext = false;
     }
 
     drawCircle() {
         const circleSize = .3;
-
-        this.graphics.save();
-        this.graphics.translateCanvas(this.fieldWidth, this.fieldHeight);
-
         const fieldDimension = Math.min(this.fieldWidth, this.fieldHeight);
 
         this.graphics.beginPath();
@@ -215,6 +218,6 @@ class GameScene extends Phaser.Scene {
         this.graphics.strokePath();
         this.graphics.closePath();
 
-        this.graphics.restore();
+        this.isCrossNext = true;
     }
 }
