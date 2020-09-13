@@ -21,6 +21,8 @@ class GameScene extends Phaser.Scene {
         super(GameScene.name);
 
         this.oneThird = .33;
+        this.primaryColor = 0xffffff;
+        this.alphaInvisible = 0;
     }
 
     preload() {
@@ -32,36 +34,44 @@ class GameScene extends Phaser.Scene {
         this.placeCrossSound = this.sound.add('cardPlace1');
         this.placeCircleSound = this.sound.add('cardPlace2');
 
-        this.captureWindowSize();
-
         this.graphics = this.add.graphics();
-        this.drawBoard();
-        this.drawCross();
-        this.placeCrossSound.play();
-        this.drawCircle();
-        this.placeCircleSound.play();
+
+        this.drawGame();
+
+        // this.placeCrossSound.play();
+        // this.placeCircleSound.play();
 
         $(window).resize(() => {
-            this.captureWindowSize();
-
             this.graphics.clear();
-            this.drawBoard();
-            this.drawCross();
-            this.drawCircle();
+
+            this.drawGame();
         });
+    }
+
+    drawGame() {
+        this.captureWindowSize();
+        this.computeSizes();
+        this.setLineStyle();
+        
+        this.drawBoard();
     }
 
     captureWindowSize() {
         this.windowWidth = $(window).width();
         this.windowHeight = $(window).height();
+    }
+
+    computeSizes() {
         this.boardLineWidth = this.windowWidth * .025;
         this.fieldWidth = this.windowWidth * this.oneThird;
         this.fieldHeight = this.windowHeight * this.oneThird;
     }
 
+    setLineStyle() {
+        this.graphics.lineStyle(this.boardLineWidth, this.primaryColor);
+    }
+
     drawBoard() {
-        this.graphics.lineStyle(this.boardLineWidth, 0xffffff);
-
         this.graphics.save();
         this.drawVerticalLine();
         this.drawVerticalLine();
@@ -71,6 +81,13 @@ class GameScene extends Phaser.Scene {
         this.drawHorizontalLine();
         this.drawHorizontalLine();
         this.graphics.restore();
+
+        this.add.rectangle(0, 0, this.fieldWidth, this.fieldHeight, this.primaryColor, this.alphaInvisible)
+            .setOrigin(0, 0)
+            .setInteractive()
+            .on(Phaser.Input.Events.POINTER_UP, () => {
+                this.drawCross();
+            });
     }
     
     drawVerticalLine() {
