@@ -23,6 +23,8 @@ class GameScene extends Phaser.Scene {
         this.oneThird = .33;
         this.primaryColor = 0xffffff;
         this.isCrossNext = true;
+        this.X_SYMBOL = 'x';
+        this.O_SYMBOL = 'o';
     }
 
     preload() {
@@ -38,9 +40,6 @@ class GameScene extends Phaser.Scene {
 
         this.drawGame();
 
-        // this.placeCrossSound.play();
-        // this.placeCircleSound.play();
-
         $(window).resize(() => this.drawGameAfterResize());
     }
 
@@ -50,18 +49,6 @@ class GameScene extends Phaser.Scene {
         this.drawGame();
     }
 
-    destroyFields() {
-        this.field00.destroy();
-        this.field10.destroy();
-        this.field20.destroy();
-        this.field01.destroy();
-        this.field11.destroy();
-        this.field21.destroy();
-        this.field02.destroy();
-        this.field12.destroy();
-        this.field22.destroy();
-    }
-
     drawGame() {
         this.captureWindowSize();
         this.computeSizes();
@@ -69,6 +56,7 @@ class GameScene extends Phaser.Scene {
 
         this.createFields();
         this.drawBoard();
+        this.resetBoard();
     }
 
     captureWindowSize() {
@@ -78,8 +66,12 @@ class GameScene extends Phaser.Scene {
 
     computeSizes() {
         this.boardLineWidth = this.windowWidth * .025;
+        
         this.fieldWidth = this.windowWidth * this.oneThird;
         this.fieldHeight = this.windowHeight * this.oneThird;
+        
+        this.fieldHalfWidth = this.fieldWidth / 2;
+        this.fieldHalfHeight = this.fieldHeight / 2;
     }
 
     setLineStyle() {
@@ -165,22 +157,43 @@ class GameScene extends Phaser.Scene {
         const field = new Phaser.Geom.Rectangle(x, y, this.fieldWidth, this.fieldHeight);
         fieldGraphics
             .setInteractive(field, Phaser.Geom.Rectangle.Contains)
-            .once(Phaser.Input.Events.POINTER_UP, () => this.drawSymbolAtPosition(x, y));
+            .once(Phaser.Input.Events.POINTER_UP, () => this.drawSymbolAtField(fieldGraphics));
+    }
+
+    /** @param {Phaser.GameObjects.Graphics} fieldGraphics */
+    drawSymbolAtField(fieldGraphics) {
+        this.translateToField(
+            fieldGraphics,
+            () => {
+                if (this.isCrossNext) {
+                    this.drawCross();
+                    this.placeCrossSound.play();
+                    this.placeSymbolOnBoard(this.X_SYMBOL, fieldGraphics);
+                } else {
+                    this.drawCircle();
+                    this.placeCircleSound.play();
+                    this.placeSymbolOnBoard(this.O_SYMBOL, fieldGraphics);
+                }
+            }
+        );
+
+        this.checkEndGame();
     }
 
     /**
-     * @param {Number} x
-     * @param {Number} y
+     * @param {Phaser.GameObjects.Graphics} fieldGraphics
+     * @param {Function} drawOperations
      */
-    drawSymbolAtPosition(x, y) {
+    translateToField(fieldGraphics, drawOperations) {
+        /** @type {Number} */
+        const x = fieldGraphics.data.values.x;
+        /** @type {Number} */
+        const y = fieldGraphics.data.values.y;
+
         this.graphics.save();
         this.graphics.translateCanvas(x, y);
 
-        if (this.isCrossNext) {
-            this.drawCross();
-        } else {
-            this.drawCircle();
-        }
+        drawOperations();
 
         this.graphics.restore();
     }
@@ -190,7 +203,7 @@ class GameScene extends Phaser.Scene {
         const crossLineLength = Math.min(this.fieldWidth, this.fieldHeight) / 2 * crossSize;
 
         this.graphics.save();
-        this.graphics.translateCanvas(this.fieldWidth / 2, this.fieldHeight / 2);
+        this.graphics.translateCanvas(this.fieldHalfWidth, this.fieldHalfHeight);
         this.graphics.rotateCanvas(Phaser.Math.DegToRad(45));
 
         this.graphics.lineBetween(-crossLineLength, 0, crossLineLength, 0);
@@ -207,8 +220,8 @@ class GameScene extends Phaser.Scene {
 
         this.graphics.beginPath();
         this.graphics.arc(
-            this.fieldWidth / 2, 
-            this.fieldHeight / 2, 
+            this.fieldHalfWidth,
+            this.fieldHalfHeight,
             fieldDimension * circleSize, 
             Phaser.Math.DegToRad(0), 
             Phaser.Math.DegToRad(360), 
@@ -219,5 +232,121 @@ class GameScene extends Phaser.Scene {
         this.graphics.closePath();
 
         this.isCrossNext = true;
+    }
+
+    /** 
+     * @param {String} symbol
+     * @param {Phaser.GameObjects.Graphics} fieldGraphics 
+     */
+    placeSymbolOnBoard(symbol, fieldGraphics) {
+        fieldGraphics.setName(symbol);
+    }
+
+    resetBoard() {
+        this.boardRows = [
+            [this.field00, this.field10, this.field20],
+            [this.field01, this.field11, this.field21],
+            [this.field02, this.field12, this.field22]
+        ];
+        this.boardColumns = [
+            [this.field00, this.field01, this.field02],
+            [this.field10, this.field11, this.field12],
+            [this.field20, this.field21, this.field22]
+        ];
+    }
+
+    checkEndGame() {
+        this.checkSymbolForWin(this.X_SYMBOL, this.boardRows);
+        this.checkSymbolForWin(this.X_SYMBOL, this.boardColumns);
+        this.checkSymbolForWin(this.O_SYMBOL, this.boardRows);
+        this.checkSymbolForWin(this.O_SYMBOL, this.boardColumns);
+        this.checkDiagonalsForWin(this.X_SYMBOL);
+        this.checkDiagonalsForWin(this.O_SYMBOL);
+    }
+
+    /** 
+     * @param {String} symbol 
+     * @param {Array<Array<Phaser.GameObjects.Graphics>>} board
+     */
+    checkSymbolForWin(symbol, board) {
+        /** @type {Array<Phaser.GameObjects.Graphics>} */
+        const rowOrColumn = board.find(rowOrColumn =>
+            rowOrColumn.every(field => field.name === symbol)
+        );
+
+        if (rowOrColumn !== undefined) {
+            const firstField = rowOrColumn[0];
+            const lastFieldIndex = 2;
+            const lastField = rowOrColumn[lastFieldIndex];
+
+            /** @type {Number} */
+            const fromX = firstField.data.values.x;
+            /** @type {Number} */
+            const fromY = firstField.data.values.y;
+
+            /** @type {Number} */
+            const toX = lastField.data.values.x;
+            /** @type {Number} */
+            const toY = lastField.data.values.y;
+
+            const lineExtensionFactor = .7;
+
+            const extendY = fromX === toX ? 1 : 0;
+            const extendX = fromY === toY ? 1 : 0;
+
+            const lineExtensionX = extendX * this.fieldHalfWidth * lineExtensionFactor;
+            const lineExtensionY = extendY * this.fieldHalfHeight * lineExtensionFactor;
+
+            this.graphics.lineBetween(
+                fromX + this.fieldHalfWidth - lineExtensionX,
+                fromY + this.fieldHalfHeight - lineExtensionY,
+                toX + this.fieldHalfWidth + lineExtensionX,
+                toY + this.fieldHalfHeight + lineExtensionY
+            );
+
+            this.destroyFields();
+        }
+    }
+
+    destroyFields() {
+        this.field00.destroy();
+        this.field10.destroy();
+        this.field20.destroy();
+        this.field01.destroy();
+        this.field11.destroy();
+        this.field21.destroy();
+        this.field02.destroy();
+        this.field12.destroy();
+        this.field22.destroy();
+    }
+
+    /** @param {String} symbol */
+    checkDiagonalsForWin(symbol) {
+        if (this.field11.name !== symbol) {
+            return;
+        }
+        const lineExtensionFactor = .7;
+
+        if (this.field00.name === symbol && this.field22.name === symbol ) {
+            const first = this.field00;
+            const last = this.field22;
+
+            this.graphics.lineBetween(
+                first.data.values.x + this.fieldHalfWidth - this.fieldHalfWidth * lineExtensionFactor,
+                first.data.values.y + this.fieldHalfHeight - this.fieldHalfHeight * lineExtensionFactor,
+                last.data.values.x + this.fieldHalfWidth + this.fieldHalfWidth * lineExtensionFactor,
+                last.data.values.y + this.fieldHalfHeight + this.fieldHalfHeight * lineExtensionFactor
+            );
+        } else if (this.field02.name === symbol && this.field20.name === symbol ) {
+            const first = this.field02;
+            const last = this.field20;
+
+            this.graphics.lineBetween(
+                first.data.values.x + this.fieldHalfWidth - this.fieldHalfWidth * lineExtensionFactor,
+                first.data.values.y + this.fieldHalfHeight + this.fieldHalfHeight * lineExtensionFactor,
+                last.data.values.x + this.fieldHalfWidth + this.fieldHalfWidth * lineExtensionFactor,
+                last.data.values.y + this.fieldHalfHeight - this.fieldHalfHeight * lineExtensionFactor
+            );
+        }
     }
 }
